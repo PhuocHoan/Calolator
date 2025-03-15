@@ -169,3 +169,48 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+# Node.js modules và build
+/front-end/node_modules/
+/front-end/dist/
+/front-end/build/
+/front-end/.cache/
+
+# Các file cấu hình môi trường
+/front-end/.env
+/front-end/.env.local
+/front-end/.env.development
+/front-end/.env.production
+/front-end/.env.test
+
+# Log files
+/front-end/npm-debug.log*
+/front-end/yarn-debug.log*
+/front-end/yarn-error.log*
+/front-end/pnpm-debug.log*
+
+# Editor config
+/front-end/.vscode/
+/front-end/.idea/
+/front-end/*.sublime-project
+/front-end/*.sublime-workspace
+
+# Hình ảnh và assets tạm thời
+/front-end/public/temp/
+/front-end/public/uploads/
+/front-end/*.psd
+/front-end/*.ai
+/front-end/*.sketch
+
+# Firebase config cache
+/front-end/firebase.json
+/front-end/firestore.indexes.json
+/front-end/firestore.rules
+/front-end/storage.rules
+
+# Tailwind/PostCSS cache
+/front-end/.tailwind-cache/
+/front-end/.postcss-cache/
+
+# Next.js (nếu có)
+/front-end/.next/
+/front-end/out/
