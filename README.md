@@ -10,7 +10,7 @@ Reactjs, Tailwindcss
 
 ### Backend
 
-Django, Mongodb (host on cloud aiven)
+Firebase
 
 ### Model
 
