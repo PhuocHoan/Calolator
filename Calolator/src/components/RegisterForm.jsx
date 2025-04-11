@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import { signInWithGoogle, registerUser } from "../services/auth";
+import PrivacyPolicyModal from "./PrivacyPolicyModal";
+import TermsOfServiceModal from "./TermsOfServiceModal";
 
 const RegisterForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const handleGoogleSignUp = async () => {
     try {
@@ -15,15 +19,17 @@ const RegisterForm = () => {
       console.log(err);
     }
   };
+
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
       const response = await registerUser(email, password);
       setMessage(response.message);
-      setError(""); // Clear any previous errors
+      setError("");
+      
     } catch (err) {
       setError(err.message);
-      setMessage(""); // Clear any previous messages
+      setMessage("");
     }
   };
 
@@ -66,34 +72,27 @@ const RegisterForm = () => {
         Tiếp tục với Google
       </button>
 
-      <button className="mb-2 flex w-full items-center justify-center rounded-lg border py-2 transition hover:bg-gray-100">
-        <img
-          src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
-          alt="Microsoft logo"
-          className="mr-2 h-5 w-5"
-        />
-        Tiếp tục với Tài khoản Microsoft
-      </button>
+        <p className="mt-4 text-center text-sm text-gray-500">
+          <button
+            type="button"
+            onClick={() => setShowTerms(true)}
+            className="text-blue-500 underline"
+          >
+            Điều khoản sử dụng
+          </button>{" "}
+          |{" "}
+          <button
+            type="button"
+            onClick={() => setShowPrivacy(true)}
+            className="text-blue-500 underline"
+          >
+            Chính sách riêng tư
+          </button>
+        </p>
+        {showTerms && <TermsOfServiceModal onClose={() => setShowTerms(false)} />}
+        {showPrivacy && <PrivacyPolicyModal onClose={() => setShowPrivacy(false)} />}
+      </form>
 
-      <button className="flex w-full items-center justify-center rounded-lg border py-2 transition hover:bg-gray-100">
-        <img
-          src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"
-          alt="Apple logo"
-          className="mr-2 h-5 w-5"
-        />
-        Tiếp tục với Apple
-      </button>
-
-      <p className="mt-4 text-center text-sm text-gray-500">
-        <a href="/terms" className="text-blue-500">
-          Điều khoản sử dụng
-        </a>{" "}
-        |{" "}
-        <a href="/privacy" className="text-blue-500">
-          Chính sách riêng tư
-        </a>
-      </p>
-    </form>
   );
 };
 
