@@ -1,10 +1,10 @@
-import { auth, googleAuthProvider } from './firebase';
-import { signInWithPopup, signOut } from 'firebase/auth';
+import { auth, googleAuthProvider } from "./firebase";
+import { signInWithPopup, signOut } from "firebase/auth";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   signInWithEmailAndPassword,
-} from 'firebase/auth';
+} from "firebase/auth";
 
 // Đăng ký người dùng
 export async function registerUser(email, password) {
@@ -21,7 +21,7 @@ export async function registerUser(email, password) {
 
     return {
       success: true,
-      message: 'Đăng ký thành công! Kiểm tra email để xác nhận tài khoản.',
+      message: "Đăng ký thành công! Kiểm tra email để xác nhận tài khoản.",
     };
   } catch (error) {
     return { success: false, message: error.message };
@@ -41,11 +41,11 @@ export async function loginUser(email, password) {
     if (!user.emailVerified) {
       return {
         success: false,
-        message: 'Vui lòng xác nhận email trước khi đăng nhập.',
+        message: "Vui lòng xác nhận email trước khi đăng nhập.",
       };
     }
 
-    return { success: true, message: 'Đăng nhập thành công!', user };
+    return { success: true, message: "Đăng nhập thành công!", user };
   } catch (error) {
     return { success: false, message: error.message };
   }
@@ -54,10 +54,10 @@ export async function loginUser(email, password) {
 export const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleAuthProvider);
-    console.log('Đăng nhập thành công:', result.user);
+    console.log("Đăng nhập thành công:", result.user);
     return result.user;
   } catch (error) {
-    console.error('Lỗi đăng nhập:', error);
+    console.error("Lỗi đăng nhập:", error);
     throw error;
   }
 };
@@ -65,8 +65,8 @@ export const signInWithGoogle = async () => {
 export const logout = async () => {
   try {
     await signOut(auth);
-    console.log('Đăng xuất thành công');
+    console.log("Đăng xuất thành công");
   } catch (error) {
-    console.error('Lỗi đăng xuất:', error);
+    console.error("Lỗi đăng xuất:", error);
   }
 };

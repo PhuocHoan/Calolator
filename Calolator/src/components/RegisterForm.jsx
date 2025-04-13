@@ -26,7 +26,6 @@ const RegisterForm = () => {
       const response = await registerUser(email, password);
       setMessage(response.message);
       setError("");
-      
     } catch (err) {
       setError(err.message);
       setMessage("");
@@ -72,27 +71,28 @@ const RegisterForm = () => {
         Tiếp tục với Google
       </button>
 
-        <p className="mt-4 text-center text-sm text-gray-500">
-          <button
-            type="button"
-            onClick={() => setShowTerms(true)}
-            className="text-blue-500 underline"
-          >
-            Điều khoản sử dụng
-          </button>{" "}
-          |{" "}
-          <button
-            type="button"
-            onClick={() => setShowPrivacy(true)}
-            className="text-blue-500 underline"
-          >
-            Chính sách riêng tư
-          </button>
-        </p>
-        {showTerms && <TermsOfServiceModal onClose={() => setShowTerms(false)} />}
-        {showPrivacy && <PrivacyPolicyModal onClose={() => setShowPrivacy(false)} />}
-      </form>
-
+      <p className="mt-4 text-center text-sm text-gray-500">
+        <button
+          type="button"
+          onClick={() => setShowTerms(true)}
+          className="text-blue-500 underline"
+        >
+          Điều khoản sử dụng
+        </button>{" "}
+        |{" "}
+        <button
+          type="button"
+          onClick={() => setShowPrivacy(true)}
+          className="text-blue-500 underline"
+        >
+          Chính sách riêng tư
+        </button>
+      </p>
+      {showTerms && <TermsOfServiceModal onClose={() => setShowTerms(false)} />}
+      {showPrivacy && (
+        <PrivacyPolicyModal onClose={() => setShowPrivacy(false)} />
+      )}
+    </form>
   );
 };
 
