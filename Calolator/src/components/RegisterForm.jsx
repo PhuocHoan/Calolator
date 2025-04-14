@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { signInWithGoogle, registerUser } from "../services/auth";
 import PrivacyPolicyModal from "./PrivacyPolicyModal";
 import TermsOfServiceModal from "./TermsOfServiceModal";
@@ -11,14 +12,20 @@ const RegisterForm = () => {
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
-  const handleGoogleSignUp = async () => {
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      setError("Đăng nhập thất bại, vui lòng thử lại.");
-      console.log(err);
-    }
-  };
+  const navigate = useNavigate();
+  const handleGoogleSignUp = async (e) => {
+      e.preventDefault();
+      try {
+        const response = await signInWithGoogle();
+        if (response) {
+          navigate("/"); // Redirect to home page after successful login
+        }
+      } catch (err) {
+        setError(err.message);
+        setMessage(""); // Clear any previous messages
+        console.error("Google sign-in error:", err);
+      }
+    };
 
   const handleRegister = async (e) => {
     e.preventDefault();
