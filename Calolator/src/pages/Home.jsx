@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { logout } from "../services/auth";
 import { auth } from "../services/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { fetchChatsByUserId } from "../services/chat"; // Adjust the import path as necessary
 import {
   Bars3Icon,
   PaperAirplaneIcon,
@@ -65,12 +66,18 @@ const Home = () => {
 
   // --- Authentication Effect ---
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         // --- TODO: Fetch past chats from Firebase for this user ---
         // For now, we keep using simulated data
-        setPastChats(simulatedPastChats);
+        try {
+          const userChats = await fetchChatsByUserId(currentUser.uid);
+          setPastChats(userChats);
+        } catch (error) {
+          console.error("Failed to fetch chats:", error);
+        }
+        // setPastChats(simulatedPastChats);
         // Optionally load the first chat or keep it empty
       } else {
         navigate("/login");
