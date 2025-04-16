@@ -3,7 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { logout } from "../services/auth";
 import { auth } from "../services/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { fetchChatsByUserId } from "../services/chat"; // Adjust the import path as necessary
+import { createUserMessage, getBotReply, addChatToHistory} from "../utils/chatUtils"; // Adjust the import path as necessary
+import {
+  fetchChatsByUserId,
+  updateChat,
+} from "../services/chat"; // Adjust the import path as necessary
 import {
   Bars3Icon,
   PaperAirplaneIcon,
@@ -13,45 +17,6 @@ import {
 } from "@heroicons/react/24/outline";
 
 // Simulated past chat data (replace with actual data fetching later)
-const simulatedPastChats = [
-  {
-    id: "chat1",
-    title: "1500 Calorie Plan",
-    messages: [
-      { sender: "user", text: "Suggest meals for 1500 calories." },
-      {
-        sender: "bot",
-        text: "Okay, for 1500 calories: Breakfast - Oatmeal with berries (300 cal), Lunch - Grilled chicken salad (500 cal), Dinner - Salmon with roasted vegetables (600 cal), Snack - Apple (100 cal).",
-      },
-    ],
-  },
-  {
-    id: "chat2",
-    title: "High Protein Meals",
-    messages: [
-      {
-        sender: "user",
-        text: "I need high protein options around 2000 calories.",
-      },
-      {
-        sender: "bot",
-        text: "Sure! For a high-protein 2000 calorie day: Breakfast - Greek yogurt with nuts (400 cal), Lunch - Lentil soup with whole-wheat bread (600 cal), Dinner - Steak with quinoa and broccoli (800 cal), Snacks - Protein shake, hard-boiled eggs (200 cal).",
-      },
-    ],
-  },
-  {
-    id: "chat3",
-    title: "Vegetarian Options",
-    messages: [
-      { sender: "user", text: "Vegetarian meals for 1800 calories?" },
-      {
-        sender: "bot",
-        text: "Got it. How about: Breakfast - Tofu scramble (350 cal), Lunch - Black bean burgers (550 cal), Dinner - Lentil shepherd's pie (700 cal), Snacks - Fruit and nuts (200 cal).",
-      },
-    ],
-  },
-];
-
 const Home = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +24,7 @@ const Home = () => {
   const [chatHistory, setChatHistory] = useState([]); // Messages for the *active* chat
   const [isBotTyping, setIsBotTyping] = useState(false); // Loading state for bot response
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Sidebar visibility
-  const [pastChats, setPastChats] = useState(simulatedPastChats); // List of past chats
+  const [pastChats, setPastChats] = useState([]); // List of past chats
   const [activeChatId, setActiveChatId] = useState(null); // ID of the currently loaded chat
   const navigate = useNavigate();
   const chatEndRef = useRef(null); // Ref for scrolling
@@ -70,14 +35,12 @@ const Home = () => {
       if (currentUser) {
         setUser(currentUser);
         // --- TODO: Fetch past chats from Firebase for this user ---
-        // For now, we keep using simulated data
         try {
           const userChats = await fetchChatsByUserId(currentUser.uid);
           setPastChats(userChats);
         } catch (error) {
           console.error("Failed to fetch chats:", error);
         }
-        // setPastChats(simulatedPastChats);
         // Optionally load the first chat or keep it empty
       } else {
         navigate("/login");
@@ -107,11 +70,9 @@ const Home = () => {
     setActiveChatId(null); // Indicate it's a new, unsaved chat
     setIsBotTyping(false);
     console.log("Starting a new chat session.");
-    // --- TODO: Create a new chat record in Firebase ---
   };
 
   const handleLoadChat = (chatId) => {
-    // --- TODO: Replace with actual fetch if needed, or assume pastChats is up-to-date ---
     const chatToLoad = pastChats.find((chat) => chat.id === chatId);
     if (chatToLoad) {
       setChatHistory(chatToLoad.messages);
@@ -123,49 +84,39 @@ const Home = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!message.trim() || isBotTyping) return;
+    if (!message.trim() || isBotTyping || !user?.uid) return;
 
-    const userMessage = {
-      sender: "user",
-      text: message,
-    };
+    const userMessage = createUserMessage(message);
     const updatedHistory = [...chatHistory, userMessage];
+    const isNewChat = !activeChatId;
+    const chatTitle = `${message.substring(0, 30)}...`;
+    const time = new Date();
+
     setChatHistory(updatedHistory);
-    const currentMessage = message; // Capture message before clearing
     setMessage("");
-    setIsBotTyping(true); // Start loading indicator
+    setIsBotTyping(true);// Start loading indicator
 
     // --- TODO: Save userMessage to Firebase for the activeChatId (or create new chat if null) ---
     // --- TODO: Call the actual external API ---
-    console.log("Sending message to API:", currentMessage);
-    await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate network delay
+    const botReply = await getBotReply(message);
+    const finalHistory = [...updatedHistory, botReply];
 
-    const apiResponse = {
-      sender: "bot",
-      text: `Okay, based on "${currentMessage}", here's a simulated recommendation: Breakfast - Scrambled Eggs (300kcal), Lunch - Tuna Salad Sandwich (500kcal), Dinner - Grilled Chicken Breast with Veggies (600kcal). Adjust portions as needed!`,
-    };
-    // --- End Simulation ---
-    // --- TODO: Save apiResponse to Firebase for the activeChatId ---
+    setChatHistory(finalHistory);
+    setIsBotTyping(false);
+    const result = await updateChat(user.uid, activeChatId, {
+      messages: finalHistory,
+      timeUpdate: time,
+      ...(isNewChat && { title: chatTitle }),
+    });
 
-    setChatHistory((prevHistory) => [...prevHistory, apiResponse]);
-    setIsBotTyping(false); // Stop loading indicator
+    // console.log(result);
 
-    // --- TODO: Update the title of the chat in pastChats if it's a new chat, based on the first message? ---
-    // Example: If activeChatId was null, create a new entry in pastChats
-    if (!activeChatId) {
-      const newChatId = `chat${Date.now()}`; // Generate a temporary ID
-      const newChatTitle = currentMessage.substring(0, 30) + "..."; // Generate a title
-      setPastChats((prev) => [
-        {
-          id: newChatId,
-          title: newChatTitle,
-          messages: [...updatedHistory, apiResponse],
-        },
-        ...prev,
-      ]);
-      setActiveChatId(newChatId);
+    if (result.success) {
+      const chatId = result.chatId;
+      if (isNewChat) setActiveChatId(chatId);
+      addChatToHistory(chatId, result.title || chatTitle, finalHistory, time, setPastChats);
     } else {
-      // Update existing chat in pastChats state (or rely on Firebase listener)
+      console.error("Failed to update or create chat.");
     }
   };
 
@@ -224,11 +175,10 @@ const Home = () => {
                   <button
                     onClick={() => handleLoadChat(chat.id)}
                     title={chat.title} // Add title attribute for tooltip when hovering
-                    className={`w-full rounded-md p-2 text-left text-sm transition duration-150 ease-in-out ${
-                      activeChatId === chat.id
+                    className={`w-full rounded-md p-2 text-left text-sm transition duration-150 ease-in-out ${activeChatId === chat.id
                         ? "bg-gray-700 font-medium"
                         : "text-gray-300 hover:bg-gray-700/50"
-                    } cursor-pointer truncate`}
+                      } cursor-pointer truncate`}
                   >
                     {chat.title}
                   </button>
@@ -295,11 +245,10 @@ const Home = () => {
               className={`flex ${chat.sender === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-xs rounded-xl px-4 py-2 shadow-md md:max-w-md lg:max-w-lg xl:max-w-2xl ${
-                  chat.sender === "user"
+                className={`max-w-xs rounded-xl px-4 py-2 shadow-md md:max-w-md lg:max-w-lg xl:max-w-2xl ${chat.sender === "user"
                     ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
                     : "bg-gray-200 text-gray-800"
-                }`}
+                  }`}
               >
                 {chat.text}
               </div>
