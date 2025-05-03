@@ -29,7 +29,6 @@ export async function registerUser(email, password) {
       message: "Đăng ký thành công! Kiểm tra email để xác nhận tài khoản.",
     };
   } catch (error) {
-    // Xử lý lỗi nếu có
     if (error.code === "auth/email-already-in-use") {
       return {
         success: false,
@@ -97,16 +96,13 @@ export async function loginUser(email, password) {
 export const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleAuthProvider);
-    // console.log("Đăng nhập thành công:", result.user);
     const user = result.user;
 
     const userRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userRef);
 
-    // Nếu chưa có document thì tạo mới
     if (!userSnap.exists()) {
       await setDoc(userRef, {
-        // có thể thêm các thông tin khác nếu cần
       });
     }
     return result.user;

@@ -15,8 +15,8 @@ const LoginForm = () => {
       const response = await loginUser(email, password);
       if (response.success) {
         setMessage(response.message);
-        setError(""); // Clear any previous errors
-        navigate("/"); // Redirect to home page after successful login
+        setError("");
+        navigate("/");
       } else {
         if (response.message === "Firebase: Error (auth/invalid-credential).") {
           setError("Email hoặc mật khẩu không đúng.");
@@ -26,7 +26,7 @@ const LoginForm = () => {
       }
     } catch (err) {
       setError(err.message);
-      setMessage(""); // Clear any previous messages
+      setMessage("");
     }
   };
 
@@ -35,11 +35,11 @@ const LoginForm = () => {
     try {
       const response = await signInWithGoogle();
       if (response) {
-        navigate("/"); // Redirect to home page after successful login
+        navigate("/");
       }
     } catch (err) {
       setError(err.message);
-      setMessage(""); // Clear any previous messages
+      setMessage("");
     }
   };
   return (

@@ -1,0 +1,9 @@
+fastapi[standard]
+transformers
+torch
+accelerate
+peft
+bitsandbytes
+python-dotenv
+scipy
+pyngrok

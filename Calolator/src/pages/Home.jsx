@@ -3,45 +3,51 @@ import { useNavigate } from "react-router-dom";
 import { logout } from "../services/auth";
 import { auth } from "../services/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { createUserMessage, getBotReply, addChatToHistory} from "../utils/chatUtils"; // Adjust the import path as necessary
+import {
+  createUserMessage,
+  getBotReply,
+  addChatToHistory,
+} from "../utils/chatUtils";
 import {
   fetchChatsByUserId,
   updateChat,
-} from "../services/chat"; // Adjust the import path as necessary
+  deleteChatFromFirestore,
+} from "../services/chat";
 import {
   Bars3Icon,
   PaperAirplaneIcon,
   ArrowRightStartOnRectangleIcon,
   PlusIcon,
   XMarkIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 
-// Simulated past chat data (replace with actual data fetching later)
 const Home = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [chatHistory, setChatHistory] = useState([]); // Messages for the *active* chat
-  const [isBotTyping, setIsBotTyping] = useState(false); // Loading state for bot response
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Sidebar visibility
-  const [pastChats, setPastChats] = useState([]); // List of past chats
-  const [activeChatId, setActiveChatId] = useState(null); // ID of the currently loaded chat
+  const [chatHistory, setChatHistory] = useState([]);
+  const [isBotTyping, setIsBotTyping] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [pastChats, setPastChats] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
   const navigate = useNavigate();
-  const chatEndRef = useRef(null); // Ref for scrolling
+  const chatEndRef = useRef(null);
 
   // --- Authentication Effect ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        // --- TODO: Fetch past chats from Firebase for this user ---
         try {
           const userChats = await fetchChatsByUserId(currentUser.uid);
-          setPastChats(userChats);
+          const sortedChats = userChats.sort(
+            (a, b) => new Date(b.time) - new Date(a.time),
+          );
+          setPastChats(sortedChats);
         } catch (error) {
           console.error("Failed to fetch chats:", error);
         }
-        // Optionally load the first chat or keep it empty
       } else {
         navigate("/login");
       }
@@ -53,7 +59,7 @@ const Home = () => {
   // --- Scroll to Bottom Effect ---
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatHistory, isBotTyping]); // Trigger scroll on new messages or typing indicator
+  }, [chatHistory, isBotTyping]);
 
   const handleLogout = async () => {
     try {
@@ -67,7 +73,7 @@ const Home = () => {
   const handleNewChat = () => {
     setChatHistory([]);
     setMessage("");
-    setActiveChatId(null); // Indicate it's a new, unsaved chat
+    setActiveChatId(null);
     setIsBotTyping(false);
     console.log("Starting a new chat session.");
   };
@@ -77,8 +83,40 @@ const Home = () => {
     if (chatToLoad) {
       setChatHistory(chatToLoad.messages);
       setActiveChatId(chatId);
-      setMessage(""); // Clear input when loading a chat
+      setMessage("");
       setIsBotTyping(false);
+    }
+  };
+
+  // --- Delete conversation ---
+  const handleDeleteChat = async (chatIdToDelete, event) => {
+    event.stopPropagation();
+    if (!user?.uid || !chatIdToDelete) return;
+
+    if (
+      window.confirm("Bạn có chắc chắn muốn xóa cuộc trò chuyện này không?")
+    ) {
+      try {
+        const result = await deleteChatFromFirestore(user.uid, chatIdToDelete);
+        if (result.success) {
+          setPastChats((prevChats) =>
+            prevChats.filter((chat) => chat.id !== chatIdToDelete),
+          );
+
+          if (activeChatId === chatIdToDelete) {
+            handleNewChat();
+          }
+          console.log(`Chat ${chatIdToDelete} deleted successfully.`);
+        } else {
+          console.error("Failed to delete chat:", result.error);
+          alert(
+            `Lỗi khi xóa cuộc trò chuyện: ${result.error || "Lỗi không xác định"}`,
+          );
+        }
+      } catch (error) {
+        console.error("Error deleting chat:", error);
+        alert("Đã xảy ra lỗi trong quá trình xóa.");
+      }
     }
   };
 
@@ -89,34 +127,52 @@ const Home = () => {
     const userMessage = createUserMessage(message);
     const updatedHistory = [...chatHistory, userMessage];
     const isNewChat = !activeChatId;
-    const chatTitle = `${message.substring(0, 30)}...`;
+    const tentativeTitle =
+      message.substring(0, 30) + (message.length > 30 ? "..." : "");
     const time = new Date();
 
     setChatHistory(updatedHistory);
     setMessage("");
-    setIsBotTyping(true);// Start loading indicator
+    setIsBotTyping(true);
 
-    // --- TODO: Save userMessage to Firebase for the activeChatId (or create new chat if null) ---
-    // --- TODO: Call the actual external API ---
-    const botReply = await getBotReply(message);
-    const finalHistory = [...updatedHistory, botReply];
+    try {
+      const botReply = await getBotReply(message);
+      const finalHistory = [...updatedHistory, botReply];
 
-    setChatHistory(finalHistory);
-    setIsBotTyping(false);
-    const result = await updateChat(user.uid, activeChatId, {
-      messages: finalHistory,
-      timeUpdate: time,
-      ...(isNewChat && { title: chatTitle }),
-    });
+      setChatHistory(finalHistory);
 
-    // console.log(result);
+      const result = await updateChat(user.uid, activeChatId, {
+        messages: finalHistory,
+        timeUpdate: time,
+        ...(isNewChat && { title: tentativeTitle }),
+      });
 
-    if (result.success) {
-      const chatId = result.chatId;
-      if (isNewChat) setActiveChatId(chatId);
-      addChatToHistory(chatId, result.title || chatTitle, finalHistory, time, setPastChats);
-    } else {
-      console.error("Failed to update or create chat.");
+      if (result.success) {
+        const newChatId = result.chatId;
+        const finalTitle = result.title || tentativeTitle;
+
+        addChatToHistory(
+          newChatId,
+          finalTitle,
+          finalHistory,
+          time,
+          setPastChats,
+        );
+
+        if (isNewChat) {
+          setActiveChatId(newChatId);
+        }
+      } else {
+        console.error("Failed to update or create chat in Firebase.");
+        alert("Lỗi khi lưu cuộc trò chuyện.");
+        setChatHistory(updatedHistory);
+      }
+    } catch (error) {
+      console.error("Error getting bot reply or updating chat:", error);
+      alert("Đã xảy ra lỗi khi gửi tin nhắn hoặc nhận phản hồi.");
+      setChatHistory(updatedHistory);
+    } finally {
+      setIsBotTyping(false);
     }
   };
 
@@ -138,14 +194,13 @@ const Home = () => {
       <div
         className={` ${isSidebarOpen ? "w-64 md:w-72" : "w-0"} container flex flex-shrink-0 flex-col overflow-hidden bg-gradient-to-b from-gray-800 to-gray-900 text-white transition-all duration-300 ease-in-out`}
       >
-        {/* Inner container to handle padding and flex column, also needs overflow hidden */}
+        {/* Inner container */}
         <div className="flex h-full flex-col overflow-hidden p-4">
           {/* Sidebar Header */}
           <div className="mb-4 flex flex-shrink-0 items-center justify-between">
             <h1 className="mr-2 overflow-hidden text-2xl font-semibold whitespace-nowrap">
               Calolator
             </h1>
-            {/* Close button */}
             <button
               onClick={toggleSidebar}
               className="flex-shrink-0 cursor-pointer p-1 text-gray-400 hover:text-white"
@@ -166,25 +221,47 @@ const Home = () => {
           {/* Past Chats Section */}
           <div className="flex-grow overflow-x-hidden overflow-y-auto pr-1">
             <h2 className="mb-2 overflow-hidden text-xs font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase">
-              {" "}
               History
             </h2>
             <ul>
               {pastChats.map((chat) => (
-                <li key={chat.id} className="mb-1">
+                <li
+                  key={chat.id}
+                  className="group relative mb-1 flex items-center"
+                >
+                  {" "}
                   <button
                     onClick={() => handleLoadChat(chat.id)}
-                    title={chat.title} // Add title attribute for tooltip when hovering
-                    className={`w-full rounded-md p-2 text-left text-sm transition duration-150 ease-in-out ${activeChatId === chat.id
-                        ? "bg-gray-700 font-medium"
-                        : "text-gray-300 hover:bg-gray-700/50"
-                      } cursor-pointer truncate`}
+                    title={chat.title}
+                    className={`flex-grow truncate rounded-md p-2 text-left text-sm transition duration-150 ease-in-out ${
+                      activeChatId === chat.id
+                        ? "bg-gray-700 pr-8 font-medium"
+                        : "pr-8 text-gray-300 hover:bg-gray-700/50"
+                    }`}
                   >
                     {chat.title}
                   </button>
+                  <button
+                    onClick={(event) => handleDeleteChat(chat.id, event)}
+                    title="Xóa cuộc trò chuyện"
+                    className="absolute right-1 p-1 text-gray-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100 hover:text-red-400"
+                    style={{
+                      display: activeChatId === chat.id ? "none" : "block",
+                    }}
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                  {activeChatId === chat.id && (
+                    <button
+                      onClick={(event) => handleDeleteChat(chat.id, event)}
+                      title="Xóa cuộc trò chuyện này"
+                      className="absolute right-1 p-1 text-gray-400 transition-colors hover:text-red-400"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  )}
                 </li>
               ))}
-              {/* Placeholder if no past chats */}
               {pastChats.length === 0 && (
                 <li className="px-2 py-1 text-sm text-gray-500">
                   No chat history yet.
@@ -197,13 +274,11 @@ const Home = () => {
           <div className="mt-auto flex-shrink-0 border-t border-gray-700 pt-4">
             {user && (
               <div className="mb-3 flex items-center gap-2 overflow-hidden text-sm text-gray-400">
-                {" "}
                 <span className="truncate" title={user.email}>
                   {user.email}
                 </span>
               </div>
             )}
-            {/* Logout Button */}
             <button
               onClick={handleLogout}
               className="focus:ring-opacity-50 flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg bg-rose-600 p-2.5 whitespace-nowrap text-white transition hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:outline-none"
@@ -219,9 +294,7 @@ const Home = () => {
       <div className="flex flex-1 flex-col bg-white shadow-inner">
         {/* Header for Chat Area */}
         <div className="flex flex-shrink-0 items-center border-b border-gray-200 p-3 md:p-4">
-          {" "}
           {!isSidebarOpen && (
-            // Open button
             <button
               onClick={toggleSidebar}
               className="mr-3 cursor-pointer p-1 text-gray-600 hover:text-gray-900"
@@ -230,7 +303,6 @@ const Home = () => {
             </button>
           )}
           <h2 className="flex-grow truncate text-lg font-medium text-gray-700">
-            {" "}
             {activeChatId
               ? (pastChats.find((c) => c.id === activeChatId)?.title ?? "Chat")
               : "New Chat"}
@@ -241,20 +313,20 @@ const Home = () => {
         <div className="flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
           {chatHistory.map((chat, index) => (
             <div
-              key={index} // Consider using a more stable key if messages have IDs
+              key={index}
               className={`flex ${chat.sender === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-xs rounded-xl px-4 py-2 shadow-md md:max-w-md lg:max-w-lg xl:max-w-2xl ${chat.sender === "user"
+                className={`max-w-xs rounded-xl px-4 py-2 shadow-md md:max-w-md lg:max-w-lg xl:max-w-2xl ${
+                  chat.sender === "user"
                     ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
                     : "bg-gray-200 text-gray-800"
-                  }`}
+                }`}
               >
                 {chat.text}
               </div>
             </div>
           ))}
-          {/* Typing Indicator */}
           {isBotTyping && (
             <div className="flex justify-start">
               <div className="max-w-xs rounded-xl bg-gray-200 px-4 py-2 text-gray-600 shadow-md">
@@ -262,7 +334,6 @@ const Home = () => {
               </div>
             </div>
           )}
-          {/* Placeholder when chat is empty */}
           {chatHistory.length === 0 && !isBotTyping && (
             <div className="flex h-full flex-col items-center justify-center text-center text-gray-500">
               <p className="text-lg font-semibold">Welcome to Calolator!</p>
@@ -279,13 +350,11 @@ const Home = () => {
               )}
             </div>
           )}
-          {/* Dummy div to ensure scrolling works */}
           <div ref={chatEndRef} />
         </div>
 
         {/* Chat Input */}
         <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50 p-3 md:p-4">
-          {" "}
           <form
             onSubmit={handleSendMessage}
             className="flex items-center space-x-3"
@@ -296,7 +365,7 @@ const Home = () => {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Suggest meals for 1800 calories..."
               className="flex-1 rounded-lg border border-gray-300 p-3 transition duration-150 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-              disabled={isBotTyping} // Disable input while bot is typing
+              disabled={isBotTyping}
             />
             <button
               type="submit"

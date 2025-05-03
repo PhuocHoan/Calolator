@@ -10,7 +10,8 @@ Reactjs, Tailwindcss
 
 ### Backend
 
-Firebase
+Firebase for authentication and Firestore for database
+FastAPI for model serving
 
 ### Model
 
