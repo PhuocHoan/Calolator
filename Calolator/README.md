@@ -85,4 +85,4 @@ Trước khi bắt đầu, hãy đảm bảo bạn đã cài đặt:
     ```
     Ứng dụng sẽ khởi động và thường có sẵn tại địa chỉ `http://localhost:5173` (hoặc một cổng khác nếu 5173 đã được sử dụng). Mở trình duyệt và truy cập địa chỉ này.
 
-    **Lưu ý:** Nếu bạn đang sử dụng `ngrok` cho backend, URL `VITE_API_BACKEND_URL` sẽ thay đổi mỗi khi bạn khởi động lại tunnel. Bạn cần cập nhật file `.env` với URL `ngrok` mới mỗi lần.
+    **Lưu ý:** Vì project đang sử dụng `ngrok` cho backend, URL `VITE_API_BACKEND_URL` sẽ thay đổi mỗi khi bạn khởi động lại tunnel. Bạn cần cập nhật file `.env` với URL `ngrok` mới mỗi lần.

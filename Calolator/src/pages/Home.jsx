@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../services/auth";
 import { auth } from "../services/firebase";
@@ -323,7 +324,7 @@ const Home = () => {
                     : "bg-gray-200 text-gray-800"
                 }`}
               >
-                {chat.text}
+                <ReactMarkdown>{chat.text}</ReactMarkdown>
               </div>
             </div>
           ))}

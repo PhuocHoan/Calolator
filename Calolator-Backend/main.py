@@ -27,10 +27,10 @@ bnb_config = BitsAndBytesConfig(
 # --- Cấu hình Generation ---
 MAX_NEW_TOKENS = 512
 DO_SAMPLE = True
-TEMPERATURE = 0.7
-TOP_K = 40
+TEMPERATURE = 0.6
+TOP_K = 50
 TOP_P = 0.9
-REPETITION_PENALTY = 1.5
+REPETITION_PENALTY = 1.2
 
 # --- Khởi tạo Model và Tokenizer ---
 model = None
@@ -118,12 +118,12 @@ async def suggest_menu(
     user_query = request.prompt
 
     formatted_prompt = f"""<|im_start|>system
-                        Bạn là chuyên gia dinh dưỡng AI. Hãy đưa ra DUY NHẤT MỘT thực đơn phù hợp<|im_end|>
-                        <|im_start|>user
-                        {user_query}<|im_end|>
-                        <|im_start|>assistant
-                        Thực đơn gợi ý:
-                        """
+Bạn là một trợ lý AI chuyên về dinh dưỡng. Nhiệm vụ của bạn là tạo ra một thực đơn gợi ý chi tiết, nếu yêu cầu thực đơn theo ngày thì phải bao gồm các bữa ăn: sáng, trưa, chiều (bữa phụ), và tối. Nếu có yêu cầu số calo cụ thể thì hãy lựa chọn và ước tính khẩu phần các món ăn sao cho tổng lượng calo của tất cả các bữa trong ngày cộng lại gần đúng với số calo được yêu cầu. Chỉ liệt kê tên món ăn và thành phần/định lượng ước tính cho từng bữa. Hãy trả lời bằng tiếng Việt tự nhiên và rõ ràng và phải trả lời theo đúng yêu cầu của người hỏi, không trả lời lan man, sai lệch câu hỏi ban đầu, trả lời đúng trọng tâm.<|im_end|>
+<|im_start|>user
+{user_query}<|im_end|>
+<|im_start|>assistant
+Thực đơn gợi ý:
+"""
 
     print(f"Formatted prompt being sent to model:\n{formatted_prompt}")
 

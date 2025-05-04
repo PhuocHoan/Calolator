@@ -113,7 +113,7 @@ Có hai kịch bản chính để chạy backend:
 - **Cách làm:** Đây là giải pháp miễn phí tận dụng GPU của Colab.
   1.  Mở Google Colab, đảm bảo đã chọn Runtime type là **GPU (T4)**.
   2.  Upload file `main.py`, `.env` và `requirements.txt` lên Colab (hoặc mount Google Drive).
-  3.  Chạy file `calolator_backend.ipynb`.
+  3.  Chạy file `run.ipynb`.
   4.  Script sẽ tải model (mất thời gian), khởi động FastAPI và in ra một URL `ngrok` công khai (ví dụ: `https://<random-string>.ngrok-free.app`).
 - **Lưu ý:**
   - URL `ngrok` là **tạm thời** và sẽ thay đổi mỗi khi bạn chạy lại notebook. Cần cập nhật URL này vào frontend.
@@ -134,3 +134,5 @@ Có hai kịch bản chính để chạy backend:
       "reply": "Câu trả lời do AI tạo ra (chuỗi gợi ý thực đơn)"
     }
     ```
+
+# Hellow
